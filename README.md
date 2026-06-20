@@ -48,8 +48,8 @@ Antonis
 
 ### Backtest Result 1
 
-![Backtest 1](Images/2026-06-20 125201.png)
+![Backtest 1](Images/2026-06-20%20125201.png)
 
 ### Backtest Result 2
 
-![Backtest 2](Images/2026-06-20 130315.png)
+![Backtest 2](Images/2026-06-20%20130315.png)
