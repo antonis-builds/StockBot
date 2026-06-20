@@ -35,7 +35,8 @@ def calculate_score(
     ma200,
     rsi,
     momentum_3m,
-    momentum_6m
+    momentum_6m,
+
 ):
 
     score = 0
@@ -46,8 +47,9 @@ def calculate_score(
     if close > ma200:
         score += 20
 
-    score += momentum_3m * 0.5
-    score += momentum_6m * 0.5
+    score += momentum_3m * 0.2
+    score += momentum_6m * 0.3
+
 
     if 45 <= rsi <= 80:
         score += 10
@@ -82,13 +84,15 @@ def analyze_stock(df):
         (close / float(df["Close"].iloc[-126])) - 1
     ) * 100
 
+
     score = calculate_score(
         close,
         ma50,
         ma200,
         rsi,
         momentum_3m,
-        momentum_6m
+        momentum_6m,
+
     )
 
     trade_signal = signal(

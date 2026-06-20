@@ -1,3 +1,16 @@
+# ==========================================
+# REAL BACKTEST ENGINE
+# ------------------------------------------
+# Downloads historical market data
+# Ranks stocks using analyze_stock()
+# Rebalances portfolio every 10 trading days
+# Applies stop-loss and trend exits
+# Compares performance against QQQ
+# ==========================================
+
+# ==========================================
+# CONFIGURATION
+# ==========================================
 import yfinance as yf
 
 from strategy import analyze_stock
@@ -7,6 +20,11 @@ import pandas as pd
 START_DATE = "2010-01-01"
 END_DATE = "2025-12-31"
 
+# ==========================================
+# STOCK UNIVERSE
+# Large-cap US stocks across sectors
+# plus selected international leaders
+# ==========================================
 stocks = [
 
     # TECH / AI
@@ -59,12 +77,18 @@ stocks = [
 
 ]
 
+
 INITIAL_CAPITAL = 10000
 TRADE_COST = 0.001
-MAX_POSITIONS = 4
+MAX_POSITIONS = 2
 
 data = {}
 
+# ==========================================
+# DOWNLOAD HISTORICAL DATA
+# Keep only stocks with at least
+# 200 trading days of history
+# ==========================================
 print("Downloading data...")
 
 for symbol in stocks:
@@ -91,6 +115,11 @@ for symbol in stocks:
 
         print(symbol, e)
 
+# ==========================================
+# FIND COMMON TRADING DATES
+# Ensures all stocks are evaluated
+# on the same rebalance dates
+# ==========================================
 common_dates = None
 
 for symbol, df in data.items():
@@ -104,6 +133,9 @@ for symbol, df in data.items():
 
 common_dates = sorted(common_dates)
 
+# ==========================================
+# PORTFOLIO STATE
+# ==========================================
 cash = INITIAL_CAPITAL
 
 positions = {}
@@ -113,6 +145,10 @@ portfolio_values = []
 trade_count = 0
 trade_log = []
 
+# ==========================================
+# MAIN BACKTEST LOOP
+# Rebalance every 10 trading days
+# ==========================================
 for i in range(200, len(common_dates), 10):
 
     current_date = common_dates[i]
@@ -139,16 +175,26 @@ for i in range(200, len(common_dates), 10):
         except:
             pass
 
+
+    # Rank all stocks based on
+    # strategy score and signal
     rankings.sort(
         key=lambda x: x["score"],
         reverse=True
     )
-
+    # Select BUY candidates
+    # ordered by highest score
     buy_list = [
         x["symbol"]
         for x in rankings
         if x["signal"] == "BUY"
     ]
+    # ==========================================
+    # SELL LOGIC
+    # Exit when:
+    # 1. Price falls below MA200
+    # 2. Stop-loss reaches -15%
+    # ==========================================
 
     # SELL
 
@@ -166,11 +212,14 @@ for i in range(200, len(common_dates), 10):
 
         buy_price = positions[symbol]["buy_price"]
 
+        # Calculate unrealized profit/loss
         loss_pct = (
                            (price - buy_price)
                            / buy_price
                    ) * 100
 
+        # Keep position if trend remains
+        # intact and stop-loss not triggered
         if (
                 price > analysis["ma200"]
                 and loss_pct > -15
@@ -202,6 +251,11 @@ for i in range(200, len(common_dates), 10):
         del positions[symbol]
 
         trade_count += 1
+    # ==========================================
+    # BUY LOGIC
+    # Fill available portfolio slots
+    # with highest-ranked BUY signals
+    # ==========================================
 
     # BUY
 
@@ -216,6 +270,8 @@ for i in range(200, len(common_dates), 10):
 
     missing = missing[:available_slots]
 
+    # Equal-weight allocation
+    # across new positions
     if len(missing) > 0:
 
         allocation = cash / len(missing)
@@ -239,6 +295,7 @@ for i in range(200, len(common_dates), 10):
 
             trade_count += 1
 
+    # Calculate current portfolio value
     portfolio_value = cash
 
     for symbol, position in positions.items():
@@ -253,6 +310,11 @@ for i in range(200, len(common_dates), 10):
     portfolio_values.append(portfolio_value)
 
 # CLOSE ALL OPEN POSITIONS
+# ==========================================
+# FORCE CLOSE REMAINING POSITIONS
+# Required for final performance
+# calculation at backtest end
+# ==========================================
 
 if len(positions) > 0:
 
@@ -306,6 +368,13 @@ for value in portfolio_values:
     if drawdown > max_drawdown:
         max_drawdown = drawdown
 
+# ==========================================
+# PERFORMANCE METRICS
+# Calculate:
+# - Final Return
+# - Trade Count
+# - Max Drawdown
+# ==========================================
 print()
 print("===== REAL BACKTEST =====")
 print()
@@ -364,6 +433,11 @@ print()
 print(f"Strategy Return: {((final_value-INITIAL_CAPITAL)/INITIAL_CAPITAL)*100:.2f}%")
 print(f"QQQ Return: {qqq_return:.2f}%")
 
+# ==========================================
+# TRADE ANALYSIS
+# Win rate, average win/loss,
+# best trades and worst trades
+# ==========================================
 wins = log_df[
     (log_df["action"] == "SELL")
     & (log_df["profit_pct"] > 0)
@@ -428,24 +502,4 @@ print(
 print()
 print("Trade log saved.")
 
-print()
-print("OPEN POSITIONS")
 
-for symbol in positions:
-
-    buy_price = positions[symbol]["buy_price"]
-
-    current_price = float(
-        data[symbol].iloc[-1]["Close"]
-    )
-
-    profit_pct = (
-        (current_price - buy_price)
-        / buy_price
-    ) * 100
-
-    print(
-        symbol,
-        round(profit_pct, 2),
-        "%"
-    )
